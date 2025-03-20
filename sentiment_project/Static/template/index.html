@@ -1,0 +1,645 @@
+<!-- sentiment_project/static/template/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentiment Analysis Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            background-color: #f5f5f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: none;
+        }
+        .stats-card {
+            padding: 15px;
+            text-align: center;
+        }
+        .stats-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #4361ee;
+            margin-bottom: 0;
+        }
+        .stats-label {
+            color: #6c757d;
+            font-size: 1rem;
+        }
+        .navbar {
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: #4361ee;
+        }
+        .search-container {
+            margin: 20px 0;
+        }
+        .sentiment-distribution {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .sentiment-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .positive {
+            color: #28a745;
+        }
+        .negative {
+            color: #dc3545;
+        }
+        .neutral {
+            color: #6c757d;
+        }
+        .sentiment-chart-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+        }
+        .model-comparison {
+            padding: 15px;
+        }
+        .model-results {
+            padding: 15px;
+        }
+        .model-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .progress-bar-container {
+            flex-grow: 1;
+            margin: 0 10px;
+        }
+        .progress {
+            height: 10px;
+        }
+        .percent-value {
+            width: 50px;
+            text-align: right;
+        }
+        .sentiment-label {
+            width: 80px;
+        }
+        .model-section {
+            border-top: 1px solid #dee2e6;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 0 10px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 10px;
+            margin-right: 5px;
+        }
+        .spinner-container {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+        }
+        .error-message {
+            color: #dc3545;
+            text-align: center;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">Sentiment Analysis Dashboard</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- Search Bar -->
+        <div class="row search-container">
+            <div class="col-md-8 offset-md-2">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Search Product</h5>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" id="searchInput" placeholder="Enter product name...">
+                            <button class="btn btn-primary" type="button" id="searchButton">Search</button>
+                        </div>
+                        <div class="form-text">Search for a product to analyze sentiment</div>
+                        <div class="spinner-container" id="loadingSpinner">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                        <div class="error-message" id="errorMessage"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card stats-card bg-light">
+                    <div class="card-body">
+                        <h5 class="stats-label">Total Reviews</h5>
+                        <p class="stats-value" id="totalReviews">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card stats-card bg-light">
+                    <div class="card-body">
+                        <h5 class="stats-label">Average Rating</h5>
+                        <p class="stats-value" id="averageRating">- <span class="fs-6 text-muted">/ 5</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card stats-card bg-light">
+                    <div class="card-body">
+                        <h5 class="stats-label">Sentiment Distribution</h5>
+                        <div class="sentiment-summary">
+                            <span class="positive fw-bold" id="positiveSentiment">-% Pos</span>
+                            <span class="negative fw-bold" id="negativeSentiment">-% Neg</span>
+                            <span class="neutral fw-bold" id="neutralSentiment">-% Neu</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sentiment Distribution -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Sentiment Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="sentiment-chart-container">
+                            <canvas id="sentimentPieChart"></canvas>
+                        </div>
+                        <div class="legend">
+                            <div class="legend-item">
+                                <div class="legend-color bg-success"></div>
+                                <span>Positive</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color bg-danger"></div>
+                                <span>Negative</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color bg-secondary"></div>
+                                <span>Neutral</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Model Comparison</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-hover" id="modelMetricsTable">
+                            <thead>
+                                <tr>
+                                    <th>MODEL</th>
+                                    <th>ACCURACY</th>
+                                    <th>PRECISION</th>
+                                    <th>RECALL</th>
+                                    <th>F1 SCORE</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr id="svcMetrics">
+                                    <td>SVC</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr id="rfMetrics">
+                                    <td>Random Forest</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr id="lstmMetrics">
+                                    <td>LSTM</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Results -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Model Results (Percentage)</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- SVC Model -->
+                        <div class="model-section">
+                            <h6 class="model-title">SVC Model</h6>
+                            <div class="result-item">
+                                <span class="sentiment-label">Positive:</span>
+                                <div class="progress-bar-container">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                <span class="percent-value text-success" id="svcPositive">-%</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="sentiment-label">Negative:</span>
+                                <div class="progress-bar-container">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-danger" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                <span class="percent-value text-danger" id="svcNegative">-%</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="sentiment-label">Neutral:</span>
+                                <div class="progress-bar-container">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-secondary" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                <span class="percent-value text-secondary" id="svcNeutral">-%</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Random Forest Model -->
+                        <div class="model-section">
+                            <h6 class="model-title">Random Forest</h6>
+                            <div class="result-item">
+                                <span class="sentiment-label">Positive:</span>
+                                <div class="progress-bar-container">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                <span class="percent-value text-success" id="rfPositive">-%</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="sentiment-label">Negative:</span>
+                                <div class="progress-bar-container">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-danger" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                <span class="percent-value text-danger" id="rfNegative">-%</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="sentiment-label">Neutral:</span>
+                                <div class="progress-bar-container">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-secondary" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                <span class="percent-value text-secondary" id="rfNeutral">-%</span>
+                            </div>
+                        </div>
+                        
+                        <!-- LSTM Model -->
+                        <div class="model-section">
+                            <h6 class="model-title">LSTM Model</h6>
+                            <div class="result-item">
+                                <span class="sentiment-label">Positive:</span>
+                                <div class="progress-bar-container">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                <span class="percent-value text-success" id="lstmPositive">-%</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="sentiment-label">Negative:</span>
+                                <div class="progress-bar-container">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-danger" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                <span class="percent-value text-danger" id="lstmNegative">-%</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="sentiment-label">Neutral:</span>
+                                <div class="progress-bar-container">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-secondary" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                <span class="percent-value text-secondary" id="lstmNeutral">-%</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Ensemble -->
+                        <div class="model-section">
+                            <h6 class="model-title">Ensemble (Average)</h6>
+                            <div class="result-item">
+                                <span class="sentiment-label">Positive:</span>
+                                <div class="progress-bar-container">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                <span class="percent-value text-success" id="ensemblePositive">-%</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="sentiment-label">Negative:</span>
+                                <div class="progress-bar-container">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-danger" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                <span class="percent-value text-danger" id="ensembleNegative">-%</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="sentiment-label">Neutral:</span>
+                                <div class="progress-bar-container">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-secondary" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                <span class="percent-value text-secondary" id="ensembleNeutral">-%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Chart Initialization -->
+    <script>
+        // Initialize the sentiment pie chart with empty data
+        const sentimentPieChart = document.getElementById('sentimentPieChart');
+        const pieChart = new Chart(sentimentPieChart, {
+            type: 'pie',
+            data: {
+                labels: ['Positive', 'Negative', 'Neutral'],
+                datasets: [{
+                    data: [0, 0, 0],
+                    backgroundColor: ['#28a745', '#dc3545', '#6c757d'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        // Function to update the UI with data
+        function updateUIWithData(data) {
+            if (data.status === 'success') {
+                const productData = data.data;
+                
+                // Update stats
+                document.getElementById('totalReviews').textContent = productData.total_reviews;
+                document.getElementById('averageRating').innerHTML = `${productData.average_rating} <span class="fs-6 text-muted">/ 5</span>`;
+                
+                // Calculate ensemble percentages
+                const svcPositive = calculatePercentage(productData.svc_results.positive, productData.total_reviews);
+                const svcNegative = calculatePercentage(productData.svc_results.negative, productData.total_reviews);
+                const svcNeutral = calculatePercentage(productData.svc_results.neutral, productData.total_reviews);
+                
+                const rfPositive = calculatePercentage(productData.rf_results.positive, productData.total_reviews);
+                const rfNegative = calculatePercentage(productData.rf_results.negative, productData.total_reviews);
+                const rfNeutral = calculatePercentage(productData.rf_results.neutral, productData.total_reviews);
+                
+                const lstmPositive = calculatePercentage(productData.lstm_results.positive, productData.total_reviews);
+                const lstmNegative = calculatePercentage(productData.lstm_results.negative, productData.total_reviews);
+                const lstmNeutral = calculatePercentage(productData.lstm_results.neutral, productData.total_reviews);
+                
+                const ensemblePositive = Math.round((svcPositive + rfPositive + lstmPositive) / 3);
+                const ensembleNegative = Math.round((svcNegative + rfNegative + lstmNegative) / 3);
+                const ensembleNeutral = Math.round((svcNeutral + rfNeutral + lstmNeutral) / 3);
+                
+                // Update sentiment summary
+                document.getElementById('positiveSentiment').textContent = `${ensemblePositive}% Pos`;
+                document.getElementById('negativeSentiment').textContent = `${ensembleNegative}% Neg`;
+                document.getElementById('neutralSentiment').textContent = `${ensembleNeutral}% Neu`;
+                
+                // Update pie chart
+                pieChart.data.datasets[0].data = [ensemblePositive, ensembleNegative, ensembleNeutral];
+                pieChart.update();
+                
+                // Update SVC model
+                updateProgressBar(0, 0, svcPositive);
+                document.getElementById('svcPositive').textContent = `${svcPositive}%`;
+                
+                updateProgressBar(0, 1, svcNegative);
+                document.getElementById('svcNegative').textContent = `${svcNegative}%`;
+                
+                updateProgressBar(0, 2, svcNeutral);
+                document.getElementById('svcNeutral').textContent = `${svcNeutral}%`;
+                
+                // Update Random Forest model
+                updateProgressBar(1, 0, rfPositive);
+                document.getElementById('rfPositive').textContent = `${rfPositive}%`;
+                
+                updateProgressBar(1, 1, rfNegative);
+                document.getElementById('rfNegative').textContent = `${rfNegative}%`;
+                
+                updateProgressBar(1, 2, rfNeutral);
+                document.getElementById('rfNeutral').textContent = `${rfNeutral}%`;
+                
+                // Update LSTM model
+                updateProgressBar(2, 0, lstmPositive);
+                document.getElementById('lstmPositive').textContent = `${lstmPositive}%`;
+                
+                updateProgressBar(2, 1, lstmNegative);
+                document.getElementById('lstmNegative').textContent = `${lstmNegative}%`;
+                
+                updateProgressBar(2, 2, lstmNeutral);
+                document.getElementById('lstmNeutral').textContent = `${lstmNeutral}%`;
+                
+                // Update Ensemble model
+                updateProgressBar(3, 0, ensemblePositive);
+                document.getElementById('ensemblePositive').textContent = `${ensemblePositive}%`;
+                
+                updateProgressBar(3, 1, ensembleNegative);
+                document.getElementById('ensembleNegative').textContent = `${ensembleNegative}%`;
+                
+                updateProgressBar(3, 2, ensembleNeutral);
+                document.getElementById('ensembleNeutral').textContent = `${ensembleNeutral}%`;
+                
+                // Update model metrics if available
+                if (productData.model_metrics) {
+                    const metrics = productData.model_metrics;
+                    
+                    // Update SVC metrics
+                    const svcRow = document.getElementById('svcMetrics').children;
+                    svcRow[1].textContent = metrics.svc.accuracy.toFixed(2);
+                    svcRow[2].textContent = metrics.svc.precision.toFixed(2);
+                    svcRow[3].textContent = metrics.svc.recall.toFixed(2);
+                    svcRow[4].textContent = metrics.svc.f1_score.toFixed(2);
+                    
+                    // Update RF metrics
+                    const rfRow = document.getElementById('rfMetrics').children;
+                    rfRow[1].textContent = metrics.rf.accuracy.toFixed(2);
+                    rfRow[2].textContent = metrics.rf.precision.toFixed(2);
+                    rfRow[3].textContent = metrics.rf.recall.toFixed(2);
+                    rfRow[4].textContent = metrics.rf.f1_score.toFixed(2);
+                    
+                    // Update LSTM metrics
+                    const lstmRow = document.getElementById('lstmMetrics').children;
+                    lstmRow[1].textContent = metrics.lstm.accuracy.toFixed(2);
+                    lstmRow[2].textContent = metrics.lstm.precision.toFixed(2);
+                    lstmRow[3].textContent = metrics.lstm.recall.toFixed(2);
+                    lstmRow[4].textContent = metrics.lstm.f1_score.toFixed(2);
+                }
+            } else {
+                // Display error message
+                document.getElementById('errorMessage').textContent = data.error || "An error occurred while analyzing the product.";
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        }
+        
+        // Helper function to calculate percentage
+        function calculatePercentage(value, total) {
+            if (total === 0) return 0;
+            return Math.round((value / total) * 100);
+        }
+        
+        // Helper function to update progress bars
+        function updateProgressBar(sectionIndex, barIndex, value) {
+            const progressBar = document.querySelectorAll('.model-section')[sectionIndex].querySelectorAll('.progress-bar')[barIndex];
+            progressBar.style.width = `${value}%`;
+            progressBar.setAttribute('aria-valuenow', value);
+        }
+
+        // Function to fetch data from the API
+        async function fetchSentimentData(productName) {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/sentiment/analyze/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ product_name: productName })
+                });
+                
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                return {
+                    status: 'error',
+                    error: 'Failed to connect to the server. Please try again later.'
+                };
+            }
+        }
+        
+        // Function to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Search functionality
+        document.getElementById('searchButton').addEventListener('click', async function() {
+            const searchInput = document.getElementById('searchInput').value.trim();
+            
+            if (searchInput === '') {
+                document.getElementById('errorMessage').textContent = 'Please enter a product name.';
+                document.getElementById('errorMessage').style.display = 'block';
+                return;
+            }
+            
+            // Show loading spinner
+            document.getElementById('loadingSpinner').style.display = 'flex';
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            try {
+                const data = await fetchSentimentData(searchInput);
+                // Hide loading spinner
+                document.getElementById('loadingSpinner').style.display = 'none';
+                
+                // Update UI with data
+                updateUIWithData(data);
+            } catch (error) {
+                // Hide loading spinner
+                document.getElementById('loadingSpinner').style.display = 'none';
+                
+                // Show error message
+                document.getElementById('errorMessage').textContent = 'An error occurred. Please try again.';
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        });
+
+        // Enable search on Enter key
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('searchButton').click();
+            }
+        });
+    </script>
+</body>
+</html>
