@@ -522,21 +522,21 @@
                 // Update model metrics if available
                 if (productData.model_metrics) {
                     const metrics = productData.model_metrics;
-                    
+                
                     // Update SVC metrics
                     const svcRow = document.getElementById('svcMetrics').children;
                     svcRow[1].textContent = metrics.svc.accuracy.toFixed(2);
                     svcRow[2].textContent = metrics.svc.precision.toFixed(2);
                     svcRow[3].textContent = metrics.svc.recall.toFixed(2);
                     svcRow[4].textContent = metrics.svc.f1_score.toFixed(2);
-                    
+                
                     // Update RF metrics
                     const rfRow = document.getElementById('rfMetrics').children;
                     rfRow[1].textContent = metrics.rf.accuracy.toFixed(2);
                     rfRow[2].textContent = metrics.rf.precision.toFixed(2);
                     rfRow[3].textContent = metrics.rf.recall.toFixed(2);
                     rfRow[4].textContent = metrics.rf.f1_score.toFixed(2);
-                    
+                
                     // Update LSTM metrics
                     const lstmRow = document.getElementById('lstmMetrics').children;
                     lstmRow[1].textContent = metrics.lstm.accuracy.toFixed(2);
@@ -544,6 +544,7 @@
                     lstmRow[3].textContent = metrics.lstm.recall.toFixed(2);
                     lstmRow[4].textContent = metrics.lstm.f1_score.toFixed(2);
                 }
+                
             } else {
                 // Display error message
                 document.getElementById('errorMessage').textContent = data.error || "An error occurred while analyzing the product.";
